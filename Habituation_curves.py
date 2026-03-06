@@ -3,7 +3,7 @@ Habituation curves for all odors (green = novel; purple = familiar)
 
 @author: Xander
 """
-
+#%%
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
@@ -26,9 +26,10 @@ import os
 #sess_ids = ['250814_XT001']
 #sess_ids = ['250814_XT001','250814_XT002','250814_XT003','250814_XT004','250814_XT005',]
 #sess_ids = ['250818_XT001','250818_XT002','250818_XT004','250818_XT005']
-sess_ids = ['250822_XT001','250822_XT002','250822_XT003','250822_XT004','250822_XT005']
-sess_ids = ['250930_XT007','250930_XT008']
-
+#sess_ids = ['250822_XT001','250822_XT002','250822_XT003','250822_XT004','250822_XT005']
+#sess_ids = ['250930_XT007','250930_XT008']
+#sess_ids = ['260302_XT009','260302_XT010','260302_XT011', '260302_XT012']
+sess_ids = ['250818_XT001','250818_XT002','250818_XT004','250818_XT005','251004_XT006','251004_XT007','251004_XT008','260302_XT009','260302_XT010','260302_XT011', '260302_XT012']
 
 
 paths_list = [f"Z:\postprocessed_data\{sess_id}" for sess_id in sess_ids]
@@ -64,8 +65,8 @@ baseline_BoI = range(0,4)
 if isstim: #stim variables
     nconds = 3
 #    conditions = [isnov,isfam, isopto]    
-    colors = ['green' , 'purple', 'purple'] 
-    ecolor = ["darkgreen","purple", 'purple']
+    colors = ['green' , 'purple', 'violet'] 
+    ecolor = ["darkgreen","purple", 'violet']
     graph = ["novel","familiar", "fam+stim"]
     markercolors = ['purple','green','purple'] 
     BoI = range(5, 8)
@@ -156,6 +157,7 @@ for m in range(n_mice):
 
 
 #%% Plotting habituation per odor per mouse
+m_data = []
 
 for m in range(n_mice):
     plt.figure(figsize = (n_mice*1.5,5))
@@ -178,44 +180,56 @@ for m in range(n_mice):
     isopto = len(opto_trials) >0
         
     if isnov:
-        tmp = [np.histogram(sniffs[m]['ml_inh_onsets'][trial_idx[nov_trials[o]]][n], bins = bins)[0] for o in range(len(nov_trials)) for n in range(n_presentations) ]
-        nov_data = tmp
+        tmp = [[] for n in range(n_presentations)]
+        for n in range(n_presentations):
+            for o in range(len(nov_trials)):
+                tmp[n].append(np.histogram(sniffs[m]['ml_inh_onsets'][trial_idx[nov_trials[o]]][n], bins = bins)[0])
+        nov_data = np.array(tmp)
         
     if isfam:
-        tmp = [np.histogram(sniffs[m]['ml_inh_onsets'][trial_idx[fam_trials[o]]][n], bins = bins)[0] for o in range(len(fam_trials)) for n in range(n_presentations) ]
-        fam_data = tmp
+        tmp = [[] for n in range(n_presentations)]
+        for n in range(n_presentations):
+            for o in range(len(fam_trials)):
+                tmp[n].append(np.histogram(sniffs[m]['ml_inh_onsets'][trial_idx[fam_trials[o]]][n], bins = bins)[0])
+        fam_data = np.array(tmp)
         
     if isopto:
-        tmp = [np.histogram(sniffs[m]['ml_inh_onsets'][trial_idx[opto_trials[o]]][n], bins = bins)[0] for o in range(len(opto_trials)) for n in range(n_presentations) ]
-        opto_data = tmp
+        tmp = [[] for n in range(n_presentations)]
+        for n in range(n_presentations):
+            for o in range(len(opto_trials)):
+                tmp[n].append(np.histogram(sniffs[m]['ml_inh_onsets'][trial_idx[opto_trials[o]]][n], bins = bins)[0])
+        opto_data = np.array(tmp)
 
-    nov_data = np.array(nov_data).reshape((len(nov_trials),n_presentations,n_bins))
-    fam_data = np.array(fam_data).reshape((len(fam_trials),n_presentations,n_bins))
-    opto_data = np.array(opto_data).reshape((len(opto_trials),n_presentations,n_bins))
     conditions = [nov_data, fam_data, opto_data]
     
-    plt.figure()
+
+
+    fig, ax = plt.subplots(1, len(conditions), figsize=(20,5), sharex=True, sharey=True)
     
     for i in range(len(conditions)):
         x_ticks = np.arange(n_presentations)
         data = conditions[i]
-        baseline = data[:,:,baseline_BoI].mean(axis=(0,2))
-        mean = data[:,:,BoI].mean(axis=(0,2))
+        baseline = data[:,:,baseline_BoI].mean(axis=(2))
+        mean = data[:,:,BoI].mean(axis=(2))
+        sem = np.std(mean, axis=1) / np.sqrt(mean.shape[0])
+
         corr_mean = mean - baseline
-        sem = np.std(mean, axis=0) / np.sqrt(mean.shape[0])
+        corr_mean = corr_mean.mean(axis=1)        
+
         
         ax[i].plot(x_ticks, corr_mean, color = colors[i])
         ax[i].fill_between(x_ticks, corr_mean +sem , corr_mean - sem, color = ecolor[i], alpha = 0.5, linewidth = 0)
+        ax[i].axhline(0, color='black', linestyle='--')
         ax[i].set_title(graph[i])
         
-    fig.suptitle('Habituation', fontweight = 'bold')
+    fig.suptitle(f'Habituation {sess_ids[m]}', fontweight = 'bold')
     fig.supxlabel("Presentation #")
     fig.supylabel("")
     plt.savefig(save_dir + "\ " + sess_ids[m] + '.png', dpi = 300)
     plt.show()    
-                    
-
-
+    
+    m_data.append(conditions)
+m_data = np.array(m_data) # convert to array for easier indexing
 
 
 #%% Plotting average habituation per mouse
@@ -228,25 +242,31 @@ axes = np.array(axes).reshape(-1)  # flatten in case of grid
 
 x_ticks = np.arange(n_presentations)
 
+
 for m in range(n_mice):
     ax = axes[m]
 
-    # collect per-odor responses
-    per_odor_series = []
-    for o in range(n_odors):
+    # collect responses per odor per presentation
+    per_odor_data = []
+    n_conds = len(m_data[m])
+    for c in range(n_conds):
+        n_presentations = m_data[m][c].shape[0]
+    
         # mean during BoI
-        data_boi = sniff_data_arr[m][o][:, BoI].mean(axis=1)
-        # mean during baseline
-        data_base = sniff_data_arr[m][o][:, baseline_BoI].mean(axis=1)
-        # subtract baseline
-        data = data_boi - data_base
-        per_odor_series.append(data)
+        data_tmp = m_data[m][c][:, :,BoI].mean(axis=2)
 
-    per_odor_series = np.array(per_odor_series)
+        # mean during baseline
+        data_tmp_bl = m_data[m][c][:, :, baseline_BoI].mean(axis=2)
+    
+        # subtract baseline
+        data_sub = data_tmp - data_tmp_bl
+
+        per_odor_data.append(data_sub)
+    per_odor_data = np.concatenate(per_odor_data, axis=1)  # concatenate odors along columns
 
     # mean and SEM across odors
-    mean = per_odor_series.mean(axis=0)
-    sem = per_odor_series.std(axis=0, ddof=1) / np.sqrt(per_odor_series.shape[0])
+    mean = per_odor_data.mean(axis=1)
+    sem = per_odor_data.std(axis=1) / np.sqrt(per_odor_data.shape[1])  # SEM across odors
 
     # shaded SEM
     ax.plot(x_ticks, mean, color="black", markersize=5, label=f"Mouse {m+1}")
@@ -281,6 +301,7 @@ fig, axes = plt.subplots(n_rows, n_cols, figsize=(4*n_cols, 4*n_rows), sharex=Tr
 axes = np.array(axes).reshape(-1)  # flatten in case of grid
 
 x_ticks = np.arange(n_presentations)
+mean_ls = []
 
 for m in range(n_mice):
     ax = axes[m]
@@ -289,15 +310,16 @@ for m in range(n_mice):
     baseline_data = []
     for o in range(n_odors):
         # mean during baseline
-        data = sniff_data_arr[m][o][:, baseline_BoI].mean(axis=1)
+        data = m_data[m][:,:,:,baseline_BoI].mean(axis = (0,2,3))
 
         baseline_data.append(data)
 
-    baseline_data = np.array(data)
+    baseline_data = np.array(baseline_data)
 
     # mean and SEM across odors
-    mean = baseline_data
+    mean = baseline_data.mean(axis=0)
     sem = baseline_data.std(axis=0, ddof=1) / np.sqrt(baseline_data.shape[0])
+    mean_ls.append(mean)
 
     # shaded SEM
     ax.plot(x_ticks, mean, color="black", markersize=5, label=sess_ids[m])
@@ -313,11 +335,18 @@ for m in range(n_mice):
     
     ax.set_title(sess_ids[m])
     ax.set_xlabel("Presentation")
-    ax.set_ylabel("Breathing Change")
-plt.suptitle('Baseline habituation', fontweight="bold", y = .91)
-
-
+    ax.set_ylabel('Inhalations/second')
+plt.suptitle('Baseline change', fontweight="bold", y = .91)
 plt.show()
+
+plt.figure(figsize=(5,5))
+plt.plot(np.array(mean_ls).mean(axis=0), color = 'black')
+plt.title('Baseline change across mice', fontweight = 'bold')
+plt.xlabel('Presentation #')
+plt.ylabel('Inhalations/second')
+
+   
+
 
     
 #%% baseline evolution over presentations (blanks) 
@@ -342,11 +371,11 @@ for m in range(n_mice):
     baseline_data = []
     for o in range(n_odors):
         # mean during baseline
-        data = sniff_data_arr[m][o][:, baseline_BoI].mean(axis=1)
+        data = m_data[m][:,:,:,baseline_BoI].mean(axis = (0,2,3))
 
         baseline_data.append(data)
 
-    baseline_data = np.array(data)
+    baseline_data = np.array(baseline_data)
 
     # mean and SEM across odors
     mean = baseline_data

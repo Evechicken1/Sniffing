@@ -1,7 +1,8 @@
+#%%
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-sys.path.append(r'C:\Users\xaand\Documents\PhD\Analysis\Informatics\PhD-patch-seq\Sniffing')
+sys.path.append(r'C:\Users\xaand\Documents\PhD\Analysis\Informatics\Python\Sniffing')
 import sniff_tools as st
 from scipy import stats
 import datetime
@@ -20,10 +21,13 @@ import matplotlib.patches as mpatches
 #sess_ids = ['240205_KK087', '240205_KK088', '240205_KK089', '240305_KK099', '240305_KK100'] # DA CTRL stim (Xander)
 #sess_ids = ['250118_KK152', '250118_KK153', '250118_KK154','250119_KK152','250119_KK153','250119_KK154','250120_KK152','250120_KK153','250120_KK154',"250121_KK152", "250121_KK153", "250121_KK154"]
 #sess_ids = ['250818_XT001','250818_XT002','250818_XT004','250818_XT005']
-#sess_ids = ['250822_XT001','250822_XT002','250822_XT003','250822_XT004','250822_XT005']
+#sess_ids = ['250822_XT001','250822_XT002','250822_XT003','250822_XT004','250822_XT005'] #laser stimulation
 #sess_ids = ['251004_XT006','251004_XT007','251004_XT008']
-sess_ids = ['250818_XT001','250818_XT002','250818_XT004','250818_XT005','251004_XT006','251004_XT007','251004_XT008']
+#sess_ids = ['250818_XT001','250818_XT002','250818_XT004','250818_XT005','251004_XT006','251004_XT007','251004_XT008']
 #sess_ids = ['250818_XT005']
+#sess_ids = ['260302_XT009','260302_XT010','260302_XT011', '260302_XT012']
+sess_ids = ['250818_XT001','250818_XT002','250818_XT004','250818_XT005','251004_XT006','251004_XT007','251004_XT008','260302_XT009','260302_XT010','260302_XT011', '260302_XT012']
+
 
 paths_list = [f"Z:\postprocessed_data\{sess_id}" for sess_id in sess_ids]
 sniffs = st.import_sniff_mat_select(paths_list)
@@ -50,8 +54,6 @@ isstim = any(sniffs[0]["trial_opto"]==1)
 isinh = any(sniffs[0]["trial_opto"]==-1)
 nmice = len(sniffs)
 baseline_bins = range(0,4)
-
-
 
 
 #Define all variables based on if sniffs[0] is an opto stim or inh or non-opto trial
@@ -103,9 +105,9 @@ for m in range(nmice):
     isfam = (sniffs[m]["trial_familiarity"]== True) & (sniffs[m]["trial_opto"]== False) & (sniffs[m]["trial_occur"] <= 3) #& (sniffs[m]["trial_blank"] == 0)
     isopto = (sniffs[m]["trial_opto"] != False) & (sniffs[m]["trial_reward"] == False) & (sniffs[m]["trial_blank"] == 0) & (sniffs[m]["trial_chem_id"] != 117) & (sniffs[m]["trial_occur"] <= 3) 
     
-#    isnov = (sniffs[m]["trial_novelty"]== True) & (sniffs[m]["trial_opto"]== False)  & (sniffs[m]["trial_occur"] >= 4)
-#    isfam = (sniffs[m]["trial_familiarity"]== True) & (sniffs[m]["trial_opto"]== False) & (sniffs[m]["trial_occur"] >= 4)
-#    isopto = (sniffs[m]["trial_opto"] != False) & (sniffs[m]["trial_reward"] == False) & (sniffs[m]["trial_blank"] == 0) & (sniffs[m]["trial_chem_id"] != 117) & (sniffs[m]["trial_occur"] >= 4)
+    isnov = (sniffs[m]["trial_novelty"]== True) & (sniffs[m]["trial_opto"]== False)  & (sniffs[m]["trial_occur"] <= 10)
+    isfam = (sniffs[m]["trial_familiarity"]== True) & (sniffs[m]["trial_opto"]== False) & (sniffs[m]["trial_occur"] <= 10)
+    isopto = (sniffs[m]["trial_opto"] != False) & (sniffs[m]["trial_reward"] == False) & (sniffs[m]["trial_blank"] == 0) & (sniffs[m]["trial_chem_id"] != 117) & (sniffs[m]["trial_occur"] <= 10)
     
 
     conditions = [isnov, isfam, isopto] if (isstim or isinh) else [isnov, isfam]
@@ -225,14 +227,107 @@ for m in range(nmice):
         plt.savefig(f"{savefolder}/Sniffing to first 3 presentations ({sess_ids[m]})_{now}.svg", dpi=400, bbox_inches="tight")
     plt.show()
 
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+import datetime
+
+bin_edges = np.linspace(-3.5, 7.5, num=12)
+
+for m in range(nmice):
+
+    fig, axes = plt.subplots(1, 3, figsize=(12,4), sharey=True)
+
+    for g in range(len(graph)):
+
+        ax = axes[g]
+
+        # ---- pull trials ----
+        trials = sniff_arr[g, m, 6:]                        # (n_trials, n_bins)
+        baseline = trials[:, baseline_bins].mean(axis=1, keepdims=True)
+        trials_bl = trials - baseline
+
+        mean = trials_bl.mean(axis=0)
+        sem  = trials_bl.std(axis=0, ddof=1) / np.sqrt(trials_bl.shape[0])
+
+        # ---- axes styling ----
+        ax.set_title(graph[g])
+        ax.axhline(y=0, color="black", linewidth=1, alpha=0.1, ls="dotted")
+        ax.axvline(x=0, color="black", linewidth=1, alpha=0.7)
+
+        ax.set_xlabel("time from odor presentation (s)")
+        if g == 0:
+            ax.set_ylabel("Δ avg inhalations (inh/s)")
+
+        ax.spines[['right','top']].set_visible(False)
+
+        # ---- plot individual trials ----
+        for tr in range(trials_bl.shape[0]):
+            ax.plot(
+                bin_edges,
+                trials_bl[tr],
+                color=colors[g],
+                alpha=0.2,
+                linewidth=1,
+                ls=line_type[g]
+            )
+
+        # ---- overlay mean ± SEM ----
+        ax.plot(bin_edges, mean, color=colors[g], linewidth=2, ls=line_type[g])
+
+        ax.errorbar(
+            bin_edges,
+            mean,
+            yerr=sem,
+            fmt='o',
+            color=colors[g],
+            ecolor=ecolor[g],
+            elinewidth=1,
+            capsize=3
+        )
+
+        # ---- stim shading ----
+        if isstim:
+            ax.axvspan(0.6, 2.6, color="red", alpha=0.3, linewidth=0)
+
+        # ---- inhalation shading ----
+        if isinh:
+            x_values = [0] + [3 + i * 0.1 for i in range(10)]
+            alpha_values = [0.33] + [0.3 - i * 0.03 for i in range(10)]
+
+            for i in range(len(x_values)-1):
+                ax.axvspan(
+                    x_values[i],
+                    x_values[i+1],
+                    color="blue",
+                    alpha=alpha_values[i],
+                    linewidth=0
+                )
+
+    fig.suptitle(f"Sniffing individual trials ({sess_ids[m]})")
+
+    plt.tight_layout()
+
+    if savefig:
+        now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        plt.savefig(
+            f"{savefolder}/Sniffing_trials_subplot_{sess_ids[m]}_{now}.svg",
+            dpi=400,
+            bbox_inches="tight"
+        )
+
+    plt.show()
+
+
 #%% Comparison of sniffing during specific timebin
 ############### Calculating data
 
 t_range = np.array((4.6,6.6))*fps
+#t_range = np.array((4.6,12))*fps
 t_time = (t_range[1]-t_range[0])/fps
 bl_range = np.array((.5,3.5))*fps
 bl_time = (bl_range[1]-bl_range[0])/fps
-graph = ["familiar", "novel","fam+stim"]
+graph = ["familiar", "fam+stim","novel",]
 
 nov = []
 fam = []
@@ -242,10 +337,10 @@ opto = []
 for m in range(nmice):
     
     trial_idx = sniffs[m]["trial_idx"] - 1 
-    nov_odors = np.logical_and(sniffs[m]['trial_novelty'] == 1,  sniffs[m]['trial_occur'] <= 8)
-    fam_odors = np.logical_and(sniffs[m]['trial_familiarity'] == 1,  sniffs[m]['trial_occur'] <= 8)
-    opto_odors = np.logical_and(sniffs[m]['trial_opto'] == 1,  sniffs[m]['trial_occur'] <= 8)
-    blank_odors = np.logical_and(sniffs[m]['trial_blank'] == 1,  sniffs[m]['trial_occur'] <= 8)
+    nov_odors = np.logical_and(sniffs[m]['trial_novelty'] == 1,  sniffs[m]['trial_occur'] <= 3)
+    fam_odors = np.logical_and(sniffs[m]['trial_familiarity'] == 1,  sniffs[m]['trial_occur'] <= 3)
+    opto_odors = np.logical_and(sniffs[m]['trial_opto'] == 1,  sniffs[m]['trial_occur'] <= 3)
+    blank_odors = np.logical_and(sniffs[m]['trial_blank'] == 1,  sniffs[m]['trial_occur'] <= 3)
     
     nov_idxs = trial_idx[nov_odors]
     fam_idxs = trial_idx[fam_odors]
@@ -410,35 +505,96 @@ if savefig:
 
 plt.show()
 
-#%% Stimulation effect per odor
+#%% Breathing change per odor per condition
 
 t_range = np.array((4.6,6.6))*fps
+#t_range = np.array((4.6,10))*fps
 t_time = (t_range[1]-t_range[0])/fps
 bl_range = np.array((.5,3.5))*fps
 bl_time = (bl_range[1]-bl_range[0])/fps
-graph = ["familiar", "novel","fam+stim"]
+
+for m in range(nmice):
+    
+    trial_idx = sniffs[m]["trial_idx"] - 1 
+
+    is_nov = (sniffs[m]['trial_novelty'] == 1) & (sniffs[m]['trial_occur'] <= 3) & (sniffs[m]['trial_opto'] == 0) & (sniffs[m]['trial_blank'] == 0)
+    is_fam = (sniffs[m]['trial_familiarity'] == 1) & (sniffs[m]['trial_occur'] <= 3) & (sniffs[m]['trial_opto'] == 0) & (sniffs[m]['trial_blank'] == 0)
+    is_opto = (sniffs[m]['trial_opto'] != 0) & (sniffs[m]['trial_occur'] <= 3) & (sniffs[m]['trial_blank'] == 0)
+    conditions = [is_nov, is_fam, is_opto]
+    cond_names = ["novel", "familiar", "opto"]
+    cond_colors = ['green' , 'purple', 'violet']
+    fig, ax = plt.subplots(1, len(conditions), figsize=(15, 5))
+    for c in range(len(conditions)):
+        odors = np.unique(sniffs[m]['trial_chem_id'][conditions[c]])
+        #print(cond_names[c], odors)
+        odor_ls = []
+        odor_sem_ls = []
+        for o in odors:
+            cond_odors = (sniffs[m]['trial_chem_id'] == o) & (conditions[c])
+            odor_idxs = trial_idx[cond_odors]
+            odor_data = np.array([len(np.where((i >t_range[0]) & (i < t_range[1]))[0]) for i in sniffs[m]['ml_inh_onsets'][odor_idxs]])/t_time
+            odor_bl = np.array([len(np.where((i > bl_range[0]) & (i < bl_range[1]))[0]) for i in sniffs[m]['ml_inh_onsets'][odor_idxs]])/bl_time
+            odor_mean = np.nanmean(odor_data - odor_bl)
+            odor_sem = np.nanstd(odor_data - odor_bl)/np.sqrt(len(odor_data))
+
+            odor_ls.append(odor_mean)
+            odor_sem_ls.append(odor_sem)
+
+        data = odor_ls
+
+        xticks = np.arange(0, len(data))
+        #plot bar plots
+        ax[c].bar(xticks, data, color=cond_colors[c])
+        ax[c].errorbar(xticks, data, yerr=odor_sem_ls, fmt='o', color='black', ecolor='black', elinewidth=1, capsize=3)
+        ax[c].set_title(f"{cond_names[c]}", fontweight='bold')
+        ax[c].set_xticks(xticks, labels=odors)
+        ax[c].set_xlabel("Odor")
+        ax[c].set_ylabel("Δ avg inhalations/sec")
+        ax[c].set_ylim(-2,6)
+
+        fig.suptitle(f"Breathing change per odor {sniffs[m]['animal_name']}", fontsize=16, fontweight='bold')
+        #plt.savefig(f"{savefolder}/Breathing_change_per_odor_{sniffs[m]['animal_name']}.svg", dpi=300, bbox_inches="tight")
+
+
+#%% Plotting distribution of odor-responses per condition
 
 for m in range(nmice):
     plt.figure()
+    
     trial_idx = sniffs[m]["trial_idx"] - 1 
-    
-    odor_ls =[]
-    odors = np.unique(sniffs[m]['trial_chem_id'][sniffs[m]['trial_opto'] == 1])
-    for o in odors:
-        opto_odors = (sniffs[m]['trial_opto'] == 1) & (sniffs[m]['trial_occur'] >= 6) & (sniffs[m]['trial_chem_id'] == o) & (sniffs[m]['trial_blank'] == 0)
-        odor_idxs = trial_idx[opto_odors]
-        odor_data = np.array([len(np.where((i >t_range[0]) & (i < t_range[1]))[0]) for i in sniffs[m]['ml_inh_onsets'][odor_idxs]])/t_time
-        odor_bl = np.array([len(np.where((i > bl_range[0]) & (i < bl_range[1]))[0]) for i in sniffs[m]['ml_inh_onsets'][odor_idxs]])/bl_time
-        odor_data = np.nanmean(odor_data - odor_bl)
-        odor_ls.append(odor_data)
-        
+
+    is_nov = (sniffs[m]['trial_novelty'] == 1) & (sniffs[m]['trial_occur'] <= 3) & (sniffs[m]['trial_opto'] == 0) & (sniffs[m]['trial_blank'] == 0)
+    is_fam = (sniffs[m]['trial_familiarity'] == 1) & (sniffs[m]['trial_occur'] <= 3) & (sniffs[m]['trial_opto'] == 0) & (sniffs[m]['trial_blank'] == 0)
+    is_opto = (sniffs[m]['trial_opto'] != 0) & (sniffs[m]['trial_occur'] <= 3) & (sniffs[m]['trial_blank'] == 0)
+    conditions = [is_nov, is_fam, is_opto]
+    cond_names = ["novel", "familiar", "opto"]
+    cond_colors = ['green' , 'purple', 'violet']   
+    fig, ax = plt.subplots(1, len(conditions), figsize=(15, 5))
+    for c in range(len(conditions)):
+        odors = np.unique(sniffs[m]['trial_chem_id'][conditions[c]])
+        print(cond_names[c], odors)
+        odor_ls = []
+        for o in odors:
+            cond_odors = (sniffs[m]['trial_chem_id'] == o) & (conditions[c])
+            odor_idxs = trial_idx[cond_odors]
+            odor_data = np.array([len(np.where((i >t_range[0]) & (i < t_range[1]))[0]) for i in sniffs[m]['ml_inh_onsets'][odor_idxs]])/t_time
+            odor_bl = np.array([len(np.where((i > bl_range[0]) & (i < bl_range[1]))[0]) for i in sniffs[m]['ml_inh_onsets'][odor_idxs]])/bl_time
+            odor_data = np.nanmean(odor_data - odor_bl)
+            odor_ls.append(odor_data)
+            
         data = odor_ls
-    
-    xticks = np.arange(0, len(data))
-    plt.bar(xticks, data)
-    plt.title(sniffs[m]['animal_name'])
-    plt.ylim(-2,4)
-    plt.show()
+
+        xticks = np.arange(0, len(data))
+        #plot bar plots
+        ax[c].hist(data, bins=6)
+        ax[c].set_title(f"{cond_names[c]}", fontweight='bold')
+        ax[c].set_xlabel("Odor")
+        ax[c].set_xlim(-2,6)
+        ax[c].set_ylabel("Δ avg inhalations/sec")
+        #ax[c].set_ylim(-2,6)
+        ax[c].axvline(x=0, color="black",linewidth=1, alpha = 0.7)
+
+        fig.suptitle(f"Breathing change per odor {sniffs[m]['animal_name']}", fontsize=16, fontweight='bold')
 
 
 
@@ -460,8 +616,4 @@ for m in range(nmice):
 
 
 
-
-
-
-
-
+# %%
