@@ -29,8 +29,8 @@ import os
 #sess_ids = ['250822_XT001','250822_XT002','250822_XT003','250822_XT004','250822_XT005']
 #sess_ids = ['250930_XT007','250930_XT008']
 #sess_ids = ['260302_XT009','260302_XT010','260302_XT011', '260302_XT012']
-sess_ids = ['250818_XT001','250818_XT002','250818_XT004','250818_XT005','251004_XT006','251004_XT007','251004_XT008','260302_XT009','260302_XT010','260302_XT011', '260302_XT012']
-
+#sess_ids = ['250818_XT001','250818_XT002','250818_XT004','250818_XT005','251004_XT006','251004_XT007','251004_XT008','260302_XT009','260302_XT010','260302_XT011', '260302_XT012']
+sess_ids = ['260306_XT009','260306_XT010','260306_XT011', '260306_XT012']
 
 paths_list = [f"Z:\postprocessed_data\{sess_id}" for sess_id in sess_ids]
 sniffs = st.import_sniff_mat_select(paths_list)
@@ -225,11 +225,35 @@ for m in range(n_mice):
     fig.suptitle(f'Habituation {sess_ids[m]}', fontweight = 'bold')
     fig.supxlabel("Presentation #")
     fig.supylabel("")
-    plt.savefig(save_dir + "\ " + sess_ids[m] + '.png', dpi = 300)
+    plt.savefig(r"C:\Users\xaand\Documents\PhD\Experiments\Opto OFC-LDTg\Analysis\habituation_curves" + "\ " + sess_ids[m] + '.png', dpi = 300)
     plt.show()    
     
     m_data.append(conditions)
 m_data = np.array(m_data) # convert to array for easier indexing
+
+#%% Plotting average habituation across mice per condition
+plt.figure(figsize=(5,5))
+m_data.shape # (n_mice, n_conditions, n_presentations, n_odors, n_bins)
+for i in range(len(conditions)):
+    x_ticks = np.arange(n_presentations)
+    data = m_data[(0,1),i].mean(axis=0) # select condition i across mice
+    baseline = data[:,:,baseline_BoI].mean(axis=(2))
+    mean = data[:,:,BoI].mean(axis=(2))
+    sem = np.std(mean, axis=1) / np.sqrt(mean.shape[0])
+
+    corr_mean = mean - baseline
+    corr_mean = corr_mean.mean(axis=1)        
+
+    plt.plot(x_ticks, corr_mean, color = colors[i], label=graph[i])
+    plt.fill_between(x_ticks, corr_mean +sem , corr_mean - sem, color = ecolor[i], alpha = 0.5, linewidth = 0)
+plt.axhline(0, color='black', linestyle='--')  
+plt.title('Habituation')
+plt.xlabel("Presentation #")
+plt.ylabel("Inhalations/second (baseline-subtracted)")
+plt.legend()
+plt.savefig(r"C:\Users\xaand\Documents\PhD\Experiments\Opto OFC-LDTg\Analysis\habituation_curves\all_mice.png", dpi = 300)
+
+plt.show()
 
 
 #%% Plotting average habituation per mouse
