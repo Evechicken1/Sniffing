@@ -156,7 +156,7 @@ for m in range(n_mice):
     odor_selector[m] = odor_tmp      
 
 
-#%% Plotting habituation per odor per mouse
+#%% Plotting habituation per condition per mouse
 m_data = []
 
 for m in range(n_mice):
@@ -251,7 +251,7 @@ plt.title('Habituation')
 plt.xlabel("Presentation #")
 plt.ylabel("Inhalations/second (baseline-subtracted)")
 plt.legend()
-plt.savefig(r"C:\Users\xaand\Documents\PhD\Experiments\Opto OFC-LDTg\Analysis\habituation_curves\all_mice.png", dpi = 300)
+plt.savefig(rf"C:\Users\xaand\Documents\PhD\Experiments\Opto OFC-LDTg\Analysis\habituation_curves\{sess_ids}.png", dpi = 300)
 
 plt.show()
 
@@ -446,3 +446,5 @@ plt.show()
 
 
 
+
+# %%

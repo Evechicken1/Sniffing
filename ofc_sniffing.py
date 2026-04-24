@@ -38,9 +38,10 @@ if len(sniffs)>0:
 #%% Import data frm pkl
 import pickle
 data_path = r'C:\Users\xaand\Documents\PhD\Experiments\Ephys OFC\data\raw_data\ofc_spks_newpreproc'
-with open(f"{data_path}/spks.pkl", 'rb') as f:
-    spks = pickle.load(f)
+with open(f"{data_path}/sniffs.pkl", 'rb') as f:
+    sniffs = pickle.load(f)
 
+sess_ids = [sniffs[m]['folder_identifier'] for m in range(len(sniffs))]
 #%% Structure data into dataframes
 ##Variables to adjust
 
@@ -57,6 +58,8 @@ fps = 713/12
 isnov=0
 isfam=0
 isopto=0
+isstim = 0
+isinh = 0
 isstim = any(sniffs[0]["trial_opto"]==1)
 isinh = any(sniffs[0]["trial_opto"]==-1)
 nmice = len(sniffs)
@@ -87,7 +90,7 @@ elif isinh: #inh variables
     BoI = range(5, 8)
     seq = [1,0,2]
     comp_grps= ["nov vs fam", "nov vs opto", "fam vs opto"]
-    line_type["solid", "solid","dotted"]
+    line_type = ["solid", "solid","dotted"]
 
 else: #non-opto variables
     nconds = 2
@@ -100,7 +103,7 @@ else: #non-opto variables
     BoI = range(5, 8)
     seq = [1,0]
     comp_grps= ["nov vs fam"]
-    line_type["solid", "solid"]
+    line_type = ["solid", "solid"]
 
 # Defining of the selector (ntrials x conditions) !! important to accurately predefine conditions before selecting!!
 ntrials = sniffs[0]["trial_idx"].size
@@ -530,10 +533,9 @@ for m in range(nmice):
 
     is_nov = (sniffs[m]['trial_novelty'] == 1) & (sniffs[m]['trial_occur'] <= 3) & (sniffs[m]['trial_opto'] == 0) & (sniffs[m]['trial_blank'] == 0)
     is_fam = (sniffs[m]['trial_familiarity'] == 1) & (sniffs[m]['trial_occur'] <= 3) & (sniffs[m]['trial_opto'] == 0) & (sniffs[m]['trial_blank'] == 0)
-    is_opto = (sniffs[m]['trial_opto'] != 0) & (sniffs[m]['trial_occur'] <= 3) & (sniffs[m]['trial_blank'] == 0)
-    conditions = [is_nov, is_fam, is_opto]
-    cond_names = ["novel", "familiar", "opto"]
-    cond_colors = ['green' , 'purple', 'violet']
+    conditions = [is_nov, is_fam]
+    cond_names = ["novel", "familiar"]
+    cond_colors = ['green' , 'purple']
     fig, ax = plt.subplots(1, len(conditions), figsize=(15, 5))
     for c in range(len(conditions)):
         odors = np.unique(sniffs[m]['trial_chem_id'][conditions[c]])
@@ -562,14 +564,11 @@ for m in range(nmice):
         ax[c].set_ylabel("inhalations/sec")
         ax[c].set_ylim(0,10)
 
-        fig.suptitle(f"Breathing change per odor {sniffs[m]['animal_name']}", fontsize=16, fontweight='bold')
+        fig.suptitle(f"Absolute breathing per odor {sniffs[m]['folder_identifier']}", fontsize=16, fontweight='bold')
         #plt.savefig(rf"C:\Users\xaand\Documents\PhD\Experiments\Opto OFC-LDTg\Analysis\per odor\Absolute_breathing_per_odor_{sniffs[m]['folder_identifier']}.png", dpi=300, bbox_inches="tight")
+        plt.show()
 
-#%% Plotting absolute sniffing responses per odor per condition
-
-
-#%% Plotting breathing change throughout trial per condition for first 3 novel presentation and all familiar presentations 
-# - only if warranted by habituation curves (flattened) 
+#%% Making m_data array (nmice x nconditions x npresentations x nbins)
 
 #making a full data array
 m_data = []
@@ -583,19 +582,16 @@ for m in range(nmice):
     odors = np.unique(sniffs[m]['trial_chem_id'])
     nov_data = []
     fam_data = []
-    opto_data = []
     tmp = []
 
     nov_trials = [(sniffs[m]['trial_chem_id'] == odors[o]) & (sniffs[m]['trial_novelty'] == 1) & (sniffs[m]['trial_chem_id'] != 117) & (sniffs[m]['trial_opto'] == 0) & (sniffs[m]['trial_blank'] == 0)for o in range(len(odors))]
     nov_trials = [i for i in nov_trials if sum(i)>0]
     fam_trials = [(sniffs[m]['trial_chem_id'] == odors[o]) & (sniffs[m]['trial_familiarity'] == 1) & (sniffs[m]['trial_chem_id'] != 117) & (sniffs[m]['trial_opto'] == 0) & (sniffs[m]['trial_blank'] == 0) for o in range(len(odors))]
     fam_trials = [i for i in fam_trials if sum(i)>0]
-    opto_trials = [(sniffs[m]['trial_chem_id'] == odors[o]) & (sniffs[m]['trial_chem_id'] != 117) & (sniffs[m]['trial_opto'] != 0) & (sniffs[m]['trial_blank'] == 0) for o in range(len(odors))]
-    opto_trials = [i for i in opto_trials if sum(i)>0]
+
     
     isnov = len(nov_trials) >0
     isfam = len(fam_trials) >0
-    isopto = len(opto_trials) >0
         
     if isnov:
         tmp = [[] for n in range(n_presentations)]
@@ -610,15 +606,9 @@ for m in range(nmice):
             for o in range(len(fam_trials)):
                 tmp[n].append(np.histogram(sniffs[m]['ml_inh_onsets'][trial_idx[fam_trials[o]]][n], bins = bins)[0])
         fam_data = np.array(tmp)
-        
-    if isopto:
-        tmp = [[] for n in range(n_presentations)]
-        for n in range(n_presentations):
-            for o in range(len(opto_trials)):
-                tmp[n].append(np.histogram(sniffs[m]['ml_inh_onsets'][trial_idx[opto_trials[o]]][n], bins = bins)[0])
-        opto_data = np.array(tmp)
 
-    conditions = [nov_data, fam_data, opto_data]
+
+    conditions = [nov_data, fam_data]
     m_data.append(conditions)
 m_data = np.array(m_data, dtype=object)
 
@@ -708,47 +698,8 @@ for m in range(nmice):
         plt.savefig(filename, dpi=400, bbox_inches="tight")
     plt.show()
 
-#%% Plotting breathing change per mouse throughout trial per condition for first 3 presentations
+#%% Plotting breathing change all mice first 3 presentations
 
-
-bin_edges = np.linspace(-3.5, 7.5, num = 12)
-
-which_presentation = [(range(0,3)),(range(0,3)),(range(0,3))] #first 3 presentations
-plt.figure(figsize=(6,3.5))
-for m in range(nmice):
-    for g in range(ngraph):
-        data = m_data[m,g,which_presentation[g]]
-        baseline = m_data[m,g,which_presentation[g],:][:,:,baseline_bins].mean(axis = (-1))
-        mean = data -baseline[:,:,None]
-        mean = mean.mean(axis = (0,1))
-        sem = np.std(sniff_arr[g].mean(axis = 1), axis = 0)/np.sqrt(nmice)
-            
-        plt.plot(bin_edges, mean, color= colors[g], label = graph[g], ls = line_type[g])
-        plt.errorbar(bin_edges, mean, yerr=sem, fmt='o', color=colors[g], ls = line_type[g] , ecolor= ecolor[g] , elinewidth=1, capsize=3)
-    plt.title(f"Mean sniffing first 3 presentations {sniffs[m]['folder_identifier']}")
-
-    plt.axhline(y=0, color="black",linewidth=1, alpha = 0.1, ls = "dotted")
-    plt.axvline(x=0, color="black",linewidth=1, alpha = 0.7)
-    plt.ylabel("Δ avg inhalations (inh/s)", fontsize=15)
-    plt.xlabel("time from odor presentation (s)", fontsize=15)
-    ax = plt.gca() #to remove the top and right spines
-    ax.spines[['right', 'top']].set_visible(False) #to remove the top and right spines
-    plt.legend()
-
-    if any(sniffs[0]["trial_opto"]==1): #shading for stim
-        plt.axvspan(xmin=0.6, xmax=2.6, color="red", alpha=0.3, linewidth = 0)
-    elif any(sniffs[0]["trial_opto"]==-1): #shading for inh
-        x_values = [0] + [3 + i * 0.1 for i in range(10)]
-        alpha_values = [0.33] + [0.3 - i * 0.03 for i in range(10)]
-        [plt.axvspan(x_values[i], x_values[i + 1], color="blue", alpha=alpha_values[i], linewidth=0) for i in range(len(x_values) - 1)]
-        
-    if savefig:
-        now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")  # e.g. 20250819_184512
-        filename = f"{savefolder}/Sniffing to first 3 presentations_sniffs{sess_ids}.png"
-        plt.savefig(filename, dpi=400, bbox_inches="tight")
-    plt.show()
-
-#%% Plotting breathing change per mouse throughout trial per condition for first 3 presentations
 
 bin_edges = np.linspace(-3.5, 7.5, num = 12)
 
@@ -791,6 +742,36 @@ if savefig:
     plt.savefig(filename, dpi=400, bbox_inches="tight")
 
 plt.show()
+
+#%% Plotting breathing change per mouse first 3 presentations
+bin_edges = np.linspace(-3.5, 7.5, num = 12)
+
+which_presentation = [(range(0,3)),(range(0,3)),(range(0,3))] #first 3 presentations
+plt.figure(figsize=(6,3.5))
+for m in range(nmice):
+    for g in range(ngraph):
+        data = m_data[m,g,which_presentation[g]]
+        baseline = m_data[m,g,which_presentation[g],:][:,:,baseline_bins].mean(axis = (-1))
+        mean = data -baseline[:,:,None]
+        mean = mean.mean(axis = (0,1))
+        sem = np.std(data[:,g].mean(axis = 1).astype(float), axis=0)/np.sqrt(nmice)
+            
+        plt.plot(bin_edges, mean, color= colors[g], label = graph[g], ls = line_type[g])
+        plt.errorbar(bin_edges, mean, yerr=sem, fmt='o', color=colors[g], ls = line_type[g] , ecolor= ecolor[g] , elinewidth=1, capsize=3)
+    plt.title(f"Mean sniffing first 3 presentations {sniffs[m]['folder_identifier']}")
+
+    plt.axhline(y=0, color="black",linewidth=1, alpha = 0.1, ls = "dotted")
+    plt.axvline(x=0, color="black",linewidth=1, alpha = 0.7)
+    plt.ylabel("Δ avg inhalations (inh/s)", fontsize=15)
+    plt.xlabel("time from odor presentation (s)", fontsize=15)
+    ax = plt.gca() #to remove the top and right spines
+    ax.spines[['right', 'top']].set_visible(False) #to remove the top and right spines
+    plt.legend()
+
+    if savefig:
+        filename = f"{savefolder}/Sniffing to first 3 presentations_{sess_ids[g*m]}.png"
+        plt.savefig(filename, dpi=400, bbox_inches="tight")
+    plt.show()
 
 #%% Sniffing to opto blanks vs non-opto blanks
 ############### Calculating data
