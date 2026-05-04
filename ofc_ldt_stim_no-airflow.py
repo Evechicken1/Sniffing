@@ -9,6 +9,7 @@ import datetime
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 
+
 #### Import sniffs dictionary ####
 
 #!!! Session ids should  be of one type (stim, inhibition or non-opto)
