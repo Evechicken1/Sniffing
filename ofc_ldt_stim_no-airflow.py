@@ -19,7 +19,7 @@ import matplotlib.patches as mpatches
 
 #no airflow
 
-sess_ids = ['260402_XT013','260402_XT014','260402_XT015', '260402_XT016']
+sess_ids = ['260402_XT013','260402_XT014','260402_XT015', '260402_XT016','260430_XT017','260430_XT018','260430_XT019']
 #sess_ids = ['260402_XT013','260402_XT014','260402_XT016']
 
 
@@ -174,7 +174,8 @@ data = np.array([no_opto, opto])   # now matches graph order
 ############### Plotting
 xpos = {label: i for i, label in enumerate(graph)}
 nconds = len(graph)
-fig_width = max(4, nconds * 1.6)
+fig_width = max(4, nconds * 5)
+#fig_width = max(4, nconds * 1.5)
 plt.figure(figsize=(fig_width, 5), dpi=300)
 seq_arr = np.zeros(shape=(nmice, nconds))
 
@@ -186,8 +187,8 @@ for m in range(nmice):
     plt.plot(graph, seq_arr[m], color='gray', linestyle='-', alpha=0.9)
 
     # markers per group
-    plt.plot(graph[0], seq_arr[m, 0], color='purple', marker='o', linestyle='-', alpha = 0.8)  # no opto
-    plt.plot(graph[1], seq_arr[m, 1], color='violet', marker='o', linestyle='-', alpha = 0.8)  # opto
+    plt.plot(graph[0], seq_arr[m, 0], color="#293440", marker='o', linestyle='-', alpha = 0.8)  # no opto
+    plt.plot(graph[1], seq_arr[m, 1], color= "#7a9bbf", marker='o', linestyle='-', alpha = 0.8)  # opto
 
 plt.ylabel("Δ avg inhalations/sec",  fontsize=17)
 plt.title("Mean sniffing change", pad = 40,  fontsize=17, weight = 'bold')
@@ -195,7 +196,7 @@ ax = plt.gca()
 ax.spines[['right', 'top']].set_visible(False)
 
 # colors
-bar_colors = ['purple', 'violet']
+bar_colors = ["#293440", '#7a9bbf']
 
 # group means and SEM across mice
 means = np.nanmean(seq_arr, axis=0)
